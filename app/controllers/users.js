@@ -1,48 +1,80 @@
 let UsersModel = require('../models/users');
 
 module.exports.usersList = async function (req, res, next) {
+  try {
 
-    try {
-        // Retrieves a list of users from the DB and waits for the result.
-        // Add your code here to retrieve the list of users from the database using the UsersModel.        
+    let users = await UserModel.find();
 
-        // If the list is empty, throw an error. Otherwise, return the list as a JSON response.
-    } catch (error) {
-        console.log(error);
-        next(error);
-    }
+    let formattedUsers = users.map(user => ({
+      firstname: user.firstname,
+      lastname: user.lastname,
+      email: user.email,
+      created: user.created,
+      updated: user.updated,
+      id: user.id   // convert _id to id
+    }));
 
-}
+    res.json({
+      success: true,
+      message: "Users list retrieved successfully.",
+      data: formattedUsers
+    });
+
+  } catch (error) {
+    console.log(error);
+    next(error);
+  }
+};
 
 module.exports.getByID = async function (req, res, next) {
-    try {
-        let user = await UsersModel.findOne({ _id: req.params.id });
-        if (!user)
-            throw new Error('User not found. Are you sure it exists?') 
-        
-        res.json({
-            success: true,
-            message: "User retrieved successfully.",
-            data: user
-        });
-        
-    } catch (error) {
-        console.log(error);
-        next(error);
-    }
-}
+  try {
+    let user = await UsersModel.findOne({ _id: req.params.id });
 
-module.exports.processAdd = async (req, res, next) => {
-    try {
- 
-        // Builds a new user from the values of the body of the request.
-        // Add your code here to create a new user object using the UsersModel and the data from req.body
-
-    } catch (error) {
-        console.log(error);
-        next(error);
+    if (!user) {
+      // ✅ return 404 instead of throwing error (prevents 500)
+      return res.status(404).json({
+        success: false,
+        message: "User not found. Are you sure it exists?"
+      });
     }
-}
+
+    res.json({
+      success: true,
+      message: "User retrieved successfully.",
+      data: user
+    });
+
+  } catch (error) {
+    console.log(error);
+    next(error);
+  }
+};
+
+let UserModel = require('../models/users');
+
+module.exports.processAdd = async function (req, res, next) {
+  try {
+
+    let user = await UserModel.create(req.body);
+
+    res.status(200).json({
+      success: true,
+      message: "User added successfully.",
+      data: {
+        firstname: user.firstname,
+        lastname: user.lastname,
+        email: user.email,
+        created: user.created,
+        updated: user.updated,
+        id: user.id   //convert _id to id
+      }
+    });
+
+  } catch (error) {
+    console.log(error);
+    next(error);
+  }
+};
 
 module.exports.processEdit = async (req, res, next) => {
     try {

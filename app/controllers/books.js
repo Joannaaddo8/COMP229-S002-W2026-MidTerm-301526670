@@ -2,8 +2,17 @@ let BookModel = require('../models/books');
 
 module.exports.getBook = async function (req, res, next) {
   try {
-    // Find one using the id sent in the parameter of the request
-    let book = await BookModel.findOne({ _id: req.params.bookId });
+    // Accept either param name (router might be :id OR :bookId)
+    const id = req.params.bookId || req.params.id;
+    console.log("GET /books id received:", id);
+    let book = await BookModel.findById(id);
+
+    if (!book) {
+      return res.status(404).json({
+        success: false,
+        message: "Book not found."
+      });
+    }
 
     res.json({
       success: true,
@@ -15,7 +24,7 @@ module.exports.getBook = async function (req, res, next) {
     console.log(error);
     next(error);
   }
-}
+};
 
 module.exports.create = async function (req, res, next) {
   try {
@@ -62,55 +71,60 @@ module.exports.getAll = async function (req, res, next) {
 
 module.exports.update = async function (req, res, next) {
   try {
-    // Get input from the request
-    let updatedBook = BookModel(req.body);
-    updatedBook._id = req.params.id;
+    const bookId = req.params.bookId;
 
-    // Submit the change
-    let result = await BookModel.updateOne({ _id: req.params.id });
-    console.log("Result: ", result);
+    const result = await BookModel.updateOne(
+      { _id: bookId },
+      { $set: req.body }
+    );
 
-    // Handle the result: send a response.
     if (result.modifiedCount > 0) {
-      res.status(200);
-      res.json(
-        {
-          success: true,
-          message: "Book updated successfully."
-        }
-      );
-    } else {
-      throw new Error('Book not updated. Are you sure it exists?')
+      return res.status(200).json({
+        success: true,
+        message: "Book updated successfully."
+      });
     }
+
+    // if matchedCount is 0 → no doc with that id
+    if (result.matchedCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Book not found."
+      });
+    }
+
+    // matched but no changes (same data)
+    return res.status(200).json({
+      success: true,
+      message: "Book updated successfully."
+    });
 
   } catch (error) {
     console.log(error);
     next(error);
   }
-}
-
+};
 
 module.exports.remove = async function (req, res, next) {
   try {
-    // Delete  using the id sent in the parameter of the request
-    let result = await BookModel.deleteOne({ _id: req.params.id });
-    console.log("Result: ", result);
+    const bookId = req.params.bookId;
 
-    // Handle the result and send a response
+    const result = await BookModel.deleteOne({ _id: bookId });
+
     if (result.deletedCount > 0) {
-      res.status(200);
-      res.json(
-        {
-          success: true,
-          message: "Book deleted successfully."
-        }
-      );
-    } else {
-      throw new Error('Book not deleted. Are you sure it exists?')
+      return res.status(200).json({
+        success: true,
+        message: "Book deleted successfully."
+      });
     }
+
+    return res.status(404).json({
+      success: false,
+      message: "Book not found."
+    });
 
   } catch (error) {
     console.log(error);
     next(error);
   }
-}
+};
